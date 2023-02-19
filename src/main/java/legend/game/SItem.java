@@ -1,5 +1,6 @@
 package legend.game;
 
+import legend.core.Config;
 import legend.core.MathHelper;
 import legend.core.Tuple;
 import legend.core.gpu.GpuCommandPoly;
@@ -24,6 +25,10 @@ import legend.game.inventory.WhichMenu;
 import legend.game.inventory.screens.MainMenuScreen;
 import legend.game.inventory.screens.MenuStack;
 import legend.game.inventory.screens.TooManyItemsScreen;
+import legend.game.modding.events.EventManager;
+import legend.game.modding.events.characters.AdditionHitMultiplierEvent;
+import legend.game.modding.events.characters.CharacterStatsEvent;
+import legend.game.modding.events.inventory.EquipmentStatsEvent;
 import legend.game.scripting.ScriptState;
 import legend.game.types.ActiveStatsa0;
 import legend.game.types.CharacterData2c;
@@ -347,7 +352,7 @@ public final class SItem {
     //LAB_800fbe70
     for(int charSlot = 0; charSlot < charCount_800c677c.get(); charSlot++) {
       final int charIndex = gameState_800babc8.charIndex_88.get(charSlot).get();
-      final ScriptState<BattleObject27c> state = SCRIPTS.allocateScriptState(charSlot + 6, null, 0, new BattleObject27c());
+      final ScriptState<BattleObject27c> state = SCRIPTS.allocateScriptState(charSlot + 6, null, 0, new BattleObject27c("Char ID " + charIndex + " (bobj + " + (charSlot + 6) + ')'));
       state.setTicker(Bttl_800c::bobjTicker);
       state.setDestructor(Bttl_800c::bobjDestructor);
       _8006e398.bobjIndices_e0c[_800c66d0.get()] = state;
@@ -575,7 +580,7 @@ public final class SItem {
           canSave_8011dc88.setu(0x1L);
         } else {
           gameState_800babc8.isOnWorldMap_4e4.set(0);
-          canSave_8011dc88.setu(standingInSavePoint_8005a368.get());
+          canSave_8011dc88.setu(Config.saveAnywhere() ? 1 : standingInSavePoint_8005a368.get());
         }
 
         inventoryMenuState_800bdc28.set(InventoryMenuState.AWAIT_INIT_1);
@@ -773,7 +778,7 @@ public final class SItem {
 
   @Method(0x801039a0L)
   public static boolean canEquip(final int equipmentId, final int charIndex) {
-    return charIndex != -1 && equipmentId < 0xc0 && (characterValidEquipment_80114284.offset(charIndex).get() & equipmentStats_80111ff0.get(equipmentId).equips_03.get()) != 0;
+    return charIndex != -1 && equipmentId < 0xc0 && (characterValidEquipment_80114284.offset(charIndex).get() & equipmentStats_80111ff0.get(equipmentId).equipableFlags_03.get()) != 0;
   }
 
   @Method(0x801039f8L)
@@ -2958,25 +2963,27 @@ public final class SItem {
   }
 
   @Method(0x80110030L)
-  public static void loadCharacterStats(long a0) {
-    final long spc0 = a0;
+  public static void loadCharacterStats(final long spc0) {
+    long a0;
 
     clearCharacterStats();
 
     //LAB_80110174
-    for(int charIndex = 0; charIndex < 9; charIndex++) {
-      final ActiveStatsa0 stats = stats_800be5f8.get(charIndex);
+    for(int charId = 0; charId < 9; charId++) {
+      final ActiveStatsa0 stats = stats_800be5f8.get(charId);
 
-      final CharacterData2c charData = gameState_800babc8.charData_32c.get(charIndex);
+      final CharacterData2c charData = gameState_800babc8.charData_32c.get(charId);
 
-      stats.xp_00.set(charData.xp_00.get());
-      stats.hp_04.set(charData.hp_08.get());
-      stats.mp_06.set(charData.mp_0a.get());
-      stats.sp_08.set(charData.sp_0c.get());
-      stats._0a.set(charData.dlevelXp_0e.get());
-      stats.dragoonFlag_0c.set(charData.status_10.get());
-      stats.level_0e.set(charData.level_12.get());
-      stats.dlevel_0f.set(charData.dlevel_13.get());
+      final CharacterStatsEvent statsEvent = EventManager.INSTANCE.postEvent(new CharacterStatsEvent(charId));
+
+      stats.xp_00.set(statsEvent.xp);
+      stats.hp_04.set(statsEvent.hp);
+      stats.mp_06.set(statsEvent.mp);
+      stats.sp_08.set(statsEvent.sp);
+      stats.dxp_0a.set(statsEvent.dxp);
+      stats.flags_0c.set(statsEvent.flags);
+      stats.level_0e.set(statsEvent.level);
+      stats.dlevel_0f.set(statsEvent.dlevel);
 
       //LAB_801101e4
       for(int i = 0; i < 5; i++) {
@@ -2991,49 +2998,52 @@ public final class SItem {
         stats.additionXp_3e.get(i).set(charData.additionXp_22.get(i).get());
       }
 
-      final LevelStuff08 levelStuff = levelStuff_800fbd30.get(charIndex).deref().get(stats.level_0e.get());
-      stats.maxHp_66.set(levelStuff.hp_00.get());
-      stats.addition_68.set(levelStuff.addition_02.get());
-      stats.bodySpeed_69.set(levelStuff.bodySpeed_03.get());
-      stats.bodyAttack_6a.set(levelStuff.bodyAttack_04.get());
-      stats.bodyMagicAttack_6b.set(levelStuff.bodyMagicAttack_05.get());
-      stats.bodyDefence_6c.set(levelStuff.bodyDefence_06.get());
-      stats.bodyMagicDefence_6d.set(levelStuff.bodyMagicDefence_07.get());
+      stats.maxHp_66.set(statsEvent.maxHp);
+      stats.addition_68.set(statsEvent.addition);
+      stats.bodySpeed_69.set(statsEvent.bodySpeed);
+      stats.bodyAttack_6a.set(statsEvent.bodyAttack);
+      stats.bodyMagicAttack_6b.set(statsEvent.bodyMagicAttack);
+      stats.bodyDefence_6c.set(statsEvent.bodyDefence);
+      stats.bodyMagicDefence_6d.set(statsEvent.bodyMagicDefence);
 
-      final MagicStuff08 magicStuff = magicStuff_800fbd54.get(charIndex).deref().get(stats.dlevel_0f.get());
-      stats.maxMp_6e.set(magicStuff.mp_00.get());
-      stats.spellIndex_70.set(magicStuff.spellIndex_02.get());
+      final MagicStuff08 magicStuff = magicStuff_800fbd54.get(charId).deref().get(stats.dlevel_0f.get());
+      stats.maxMp_6e.set(statsEvent.maxMp);
+      stats.spellIndex_70.set(statsEvent.spellId);
       stats._71.set(magicStuff._03.get());
-      stats.dragoonAttack_72.set(magicStuff.dragoonAttack_04.get());
-      stats.dragoonMagicAttack_73.set(magicStuff.dragoonMagicAttack_05.get());
-      stats.dragoonDefence_74.set(magicStuff.dragoonDefence_06.get());
-      stats.dragoonMagicDefence_75.set(magicStuff.dragoonMagicDefence_07.get());
+      stats.dragoonAttack_72.set(statsEvent.dragoonAttack);
+      stats.dragoonMagicAttack_73.set(statsEvent.dragoonMagicAttack);
+      stats.dragoonDefence_74.set(statsEvent.dragoonDefence);
+      stats.dragoonMagicDefence_75.set(statsEvent.dragoonMagicDefence);
 
-      final int a2 = stats.selectedAddition_35.get();
-      if(a2 != -1) {
+      final int additionIndex = stats.selectedAddition_35.get();
+      if(additionIndex != -1) {
         //TODO straighten this out
-        a0 = ptrTable_80114070.offset(a2 * 0x4L).deref(4).offset(MEMORY.ref(1, stats.additionLevels_36.getAddress()).offset(a2 - additionOffsets_8004f5ac.get(charIndex).get()).get() * 0x4L).getAddress();
+        a0 = ptrTable_80114070.offset(additionIndex * 0x4L).deref(4).offset(stats.additionLevels_36.get(additionIndex - additionOffsets_8004f5ac.get(charId).get()).get() * 0x4L).getAddress();
 
         stats._9c.set((int)MEMORY.ref(2, a0).offset(0x0L).get());
         stats.additionSpMultiplier_9e.set((int)MEMORY.ref(1, a0).offset(0x2L).get());
         stats.additionDamageMultiplier_9f.set((int)MEMORY.ref(1, a0).offset(0x3L).get());
+
+        final AdditionHitMultiplierEvent event = EventManager.INSTANCE.postEvent(new AdditionHitMultiplierEvent(additionIndex, stats.additionLevels_36.get(additionIndex - additionOffsets_8004f5ac.get(charId).get()).get(), stats.additionSpMultiplier_9e.get(), stats.additionDamageMultiplier_9f.get()));
+        stats.additionSpMultiplier_9e.set(event.additionSpMulti);
+        stats.additionDamageMultiplier_9f.set(event.additionDmgMulti);
       }
 
       //LAB_8011042c
-      FUN_8011085c(charIndex);
+      applyEquipmentStats(charId);
 
-      long v0 = _800fbd08.get(charIndex).get();
+      long v0 = _800fbd08.get(charId).get();
       a0 = v0 & 0x1fL;
       v0 = v0 >>> 5;
       if((gameState_800babc8.dragoonSpirits_19c.get((int)v0).get() & 0x1 << a0) != 0) {
-        stats.dragoonFlag_0c.or(0x2000);
-        a0 = _800fbd08.get(charIndex).get();
+        stats.flags_0c.or(0x2000);
+        a0 = _800fbd08.get(charId).get();
 
         if((gameState_800babc8._4e6.get() >> a0 & 1) == 0) {
           gameState_800babc8._4e6.or(1 << a0);
 
-          stats.mp_06.set(magicStuff.mp_00.get());
-          stats.maxMp_6e.set(magicStuff.mp_00.get());
+          stats.mp_06.set(statsEvent.maxMp);
+          stats.maxMp_6e.set(statsEvent.maxMp);
         }
       } else {
         //LAB_801104ec
@@ -3043,20 +3053,20 @@ public final class SItem {
       }
 
       //LAB_801104f8
-      if(charIndex == 0) {
+      if(charId == 0) {
         v0 = _800fbd08.get(9).get();
 
         a0 = v0 & 0x1fL;
         v0 = v0 >>> 5;
         if((gameState_800babc8.dragoonSpirits_19c.get((int)v0).get() & 0x1 << a0) != 0) {
-          stats.dragoonFlag_0c.or(0x6000);
+          stats.flags_0c.or(0x6000);
 
           final long a1 = _800fbd08.get(0).get();
 
           if((gameState_800babc8._4e6.get() >> a1 & 1) == 0) {
             gameState_800babc8._4e6.or(1 << a1);
-            stats.mp_06.set(magicStuff.mp_00.get());
-            stats.maxMp_6e.set(magicStuff.mp_00.get());
+            stats.mp_06.set(statsEvent.maxMp);
+            stats.maxMp_6e.set(statsEvent.maxMp);
           } else {
             //LAB_80110590
             stats.mp_06.set(charData.mp_0a.get());
@@ -3108,122 +3118,125 @@ public final class SItem {
   }
 
   @Method(0x8011085cL)
-  public static void FUN_8011085c(final int charIndex) {
-    FUN_8002a86c(charIndex);
-    final ActiveStatsa0 characterStats = stats_800be5f8.get(charIndex);
-    final EquipmentStats1c equipmentStats = equipmentStats_800be5d8;
+  public static void applyEquipmentStats(final int charId) {
+    FUN_8002a86c(charId);
+    final ActiveStatsa0 characterStats = stats_800be5f8.get(charId);
 
     //LAB_801108b0
     for(int equipmentSlot = 0; equipmentSlot < 5; equipmentSlot++) {
-      final int equipmentId = stats_800be5f8.get(charIndex).equipment_30.get(equipmentSlot).get();
+      final int equipmentId = stats_800be5f8.get(charId).equipment_30.get(equipmentSlot).get();
 
       if(equipmentId != 0xff) {
         FUN_801106cc(equipmentId);
 
-        characterStats.specialEffectFlag_76.or(equipmentStats._00.get());
-        characterStats._77.or(equipmentStats.type_01.get());
-        characterStats._78.or(equipmentStats._02.get());
-        characterStats._79.or(equipmentStats.equips_03.get());
-        characterStats.elementFlag_7a.or(equipmentStats.element_04.get());
-        characterStats._7b.or(equipmentStats._05.get());
-        characterStats.elementalResistanceFlag_7c.or(equipmentStats.eHalf_06.get());
-        characterStats.elementalImmunityFlag_7d.or(equipmentStats.eImmune_07.get());
-        characterStats.statusResistFlag_7e.or(equipmentStats.statRes_08.get());
-        characterStats._7f.or(equipmentStats._09.get());
-        characterStats._84.add(equipmentStats.icon_0e.get());
-        characterStats.gearSpeed_86.add(equipmentStats.spd_0f.get());
-        characterStats.gearAttack_88.add(equipmentStats.atkHi_10.get());
-        characterStats.gearMagicAttack_8a.add(equipmentStats.matk_11.get());
-        characterStats.gearDefence_8c.add(equipmentStats.def_12.get());
-        characterStats.gearMagicDefence_8e.add(equipmentStats.mdef_13.get());
-        characterStats.attackHit_90.add(equipmentStats.aHit_14.get());
-        characterStats.magicHit_92.add(equipmentStats.mHit_15.get());
-        characterStats.attackAvoid_94.add(equipmentStats.aAv_16.get());
-        characterStats.magicAvoid_96.add(equipmentStats.mAv_17.get());
-        characterStats.onHitStatusChance_98.add(equipmentStats.onStatusChance_18.get());
-        characterStats._99.add(equipmentStats._19.get());
-        characterStats._9a.add(equipmentStats._1a.get());
-        characterStats.onHitStatus_9b.or(equipmentStats.onHitStatus_1b.get());
-        characterStats._80.add(equipmentStats.atk_0a.get());
-        characterStats.gearAttack_88.add((short)equipmentStats.atk_0a.get());
-        characterStats._81.or(equipmentStats.special1_0b.get());
+        final EquipmentStatsEvent event = EventManager.INSTANCE.postEvent(new EquipmentStatsEvent(charId, equipmentId));
 
-        //LAB_80110b10
-        long a0 = 0x1L;
-        long a1;
-        for(a1 = 0; a1 < 8; a1++) {
-          if((equipmentStats.special1_0b.get() & a0) != 0) {
-            if(a0 == 0x1L) {
-              //LAB_80110c14
-              characterStats.mpPerMagicalHit_54.add((short)equipmentStats.specialAmount_0d.get());
-            } else if(a0 == 0x2L) {
-              //LAB_80110bfc
-              characterStats.spPerMagicalHit_52.add((short)equipmentStats.specialAmount_0d.get());
-              //LAB_80110b54
-            } else if(a0 == 0x4L) {
-              //LAB_80110be4
-              characterStats.mpPerPhysicalHit_50.add((short)equipmentStats.specialAmount_0d.get());
-            } else if(a0 == 0x8L) {
-              //LAB_80110bcc
-              characterStats.spPerPhysicalHit_4e.add((short)equipmentStats.specialAmount_0d.get());
-            } else if(a0 == 0x10L) {
-              //LAB_80110bb4
-              characterStats.spMultiplier_4c.add((short)equipmentStats.specialAmount_0d.get());
-              //LAB_80110b64
-            } else if(a0 == 0x20L) {
-              //LAB_80110bac
-              characterStats.physicalResistance_4a.set(1);
-              //LAB_80110b88
-            } else if(a0 == 0x40L) {
-              //LAB_80110ba4
-              characterStats.magicalImmunity_48.set(1);
-            } else if(a0 == 0x80L) {
-              characterStats.physicalImmunity_46.set(1);
-            }
-          }
+        characterStats.specialEffectFlag_76.or(event.flags);
+        characterStats._77.or(event.type);
+        characterStats._78.or(event._02);
+        characterStats._79.or(event.equipableFlags);
+        characterStats.elementFlag_7a.or(event.element);
+        characterStats._7b.or(event._05);
+        characterStats.elementalResistanceFlag_7c.or(event.elementalResistance);
+        characterStats.elementalImmunityFlag_7d.or(event.elementalImmunity);
+        characterStats.statusResistFlag_7e.or(event.statusResist);
+        characterStats._7f.or(event._09);
+        characterStats._84.add(event.icon);
+        characterStats.gearSpeed_86.add((short)event.speed);
+        characterStats.gearAttack_88.add((short)event.attack);
+        characterStats.gearMagicAttack_8a.add((short)event.magicAttack);
+        characterStats.gearDefence_8c.add((short)event.defence);
+        characterStats.gearMagicDefence_8e.add((short)event.magicDefence);
+        characterStats.attackHit_90.add((short)event.attackHit);
+        characterStats.magicHit_92.add((short)event.magicHit);
+        characterStats.attackAvoid_94.add((short)event.attackAvoid);
+        characterStats.magicAvoid_96.add((short)event.magicAvoid);
+        characterStats.onHitStatusChance_98.add(event.statusChance);
+        characterStats._99.add(event._19);
+        characterStats._9a.add(event._1a);
+        characterStats.onHitStatus_9b.or(event.onHitStatus);
+        characterStats._80.add(event.attack & 0xff); // This used to just be the low attack value, but since we aren't using two values in the event like the old table did, I dunno if this will work
 
-          //LAB_80110c28
-          a0 = a0 << 1;
+        if(event.mpPerMagicalHit != 0) {
+          characterStats.special1_81.or(0x1);
         }
 
-        characterStats._82.or(equipmentStats.special2_0c.get());
-
-        //LAB_80110c54
-        a0 = 0x1L;
-        for(a1 = 0; a1 < 8; a1++) {
-          if((equipmentStats.special2_0c.get() & a0) != 0) {
-            if(a0 == 0x1L) {
-              //LAB_80110d78
-              characterStats.mpMulti_64.add((short)equipmentStats.specialAmount_0d.get());
-            } else if(a0 == 0x2L) {
-              //LAB_80110d60
-              characterStats.hpMulti_62.add((short)equipmentStats.specialAmount_0d.get());
-              //LAB_80110c98
-            } else if(a0 == 0x4L) {
-              //LAB_80110d58
-              characterStats.magicalResistance_60.set(1);
-            } else if(a0 == 0x8L) {
-              //LAB_80110d40
-              characterStats.revive_5e.add((short)equipmentStats.specialAmount_0d.get());
-            } else if(a0 == 0x10L) {
-              //LAB_80110d28
-              characterStats.spRegen_5c.add((short)equipmentStats.specialAmount_0d.get());
-              //LAB_80110ca8
-            } else if(a0 == 0x20L) {
-              //LAB_80110d10
-              characterStats.mpRegen_5a.add((short)equipmentStats.specialAmount_0d.get());
-              //LAB_80110ccc
-            } else if(a0 == 0x40L) {
-              //LAB_80110cf8
-              characterStats.hpRegen_58.add((short)equipmentStats.specialAmount_0d.get());
-            } else if(a0 == 0x80L) {
-              characterStats._56.add((short)equipmentStats.specialAmount_0d.get());
-            }
-          }
-
-          //LAB_80110d8c
-          a0 = a0 << 1;
+        if(event.spPerMagicalHit != 0) {
+          characterStats.special1_81.or(0x2);
         }
+
+        if(event.mpPerPhysicalHit != 0) {
+          characterStats.special1_81.or(0x4);
+        }
+
+        if(event.spPerPhysicalHit != 0) {
+          characterStats.special1_81.or(0x8);
+        }
+
+        if(event.spMultiplier != 0) {
+          characterStats.special1_81.or(0x10);
+        }
+
+        if(event.physicalResistance) {
+          characterStats.special1_81.or(0x20);
+        }
+
+        if(event.magicalImmunity) {
+          characterStats.special1_81.or(0x40);
+        }
+
+        if(event.physicalImmunity) {
+          characterStats.special1_81.or(0x80);
+        }
+
+        if(event.mpMultiplier != 0) {
+          characterStats.special2_82.or(0x1);
+        }
+
+        if(event.hpMultiplier != 0) {
+          characterStats.special2_82.or(0x2);
+        }
+
+        if(event.magicalResistance) {
+          characterStats.special2_82.or(0x4);
+        }
+
+        if(event.revive != 0) {
+          characterStats.special2_82.or(0x8);
+        }
+
+        if(event.spRegen != 0) {
+          characterStats.special2_82.or(0x10);
+        }
+
+        if(event.mpRegen != 0) {
+          characterStats.special2_82.or(0x20);
+        }
+
+        if(event.hpRegen != 0) {
+          characterStats.special2_82.or(0x40);
+        }
+
+        if(event._56 != 0) {
+          characterStats.special2_82.or(0x80);
+        }
+
+        characterStats.mpPerMagicalHit_54.add((short)event.mpPerMagicalHit);
+        characterStats.spPerMagicalHit_52.add((short)event.spPerMagicalHit);
+        characterStats.mpPerPhysicalHit_50.add((short)event.mpPerPhysicalHit);
+        characterStats.spPerPhysicalHit_4e.add((short)event.spPerPhysicalHit);
+        characterStats.hpMulti_62.add((short)event.hpMultiplier);
+        characterStats.mpMulti_64.add((short)event.mpMultiplier);
+        characterStats.spMultiplier_4c.add((short)event.spMultiplier);
+        characterStats.magicalResistance_60.set(event.magicalResistance ? 1 : 0);
+        characterStats.physicalResistance_4a.set(event.physicalResistance ? 1 : 0);
+        characterStats.magicalImmunity_48.set(event.magicalImmunity ? 1 : 0);
+        characterStats.physicalImmunity_46.set(event.physicalImmunity ? 1 : 0);
+        characterStats.revive_5e.add((short)event.revive);
+        characterStats.hpRegen_58.add((short)event.hpRegen);
+        characterStats.mpRegen_5a.add((short)event.mpRegen);
+        characterStats.spRegen_5c.add((short)event.spRegen);
+        characterStats._56.add((short)event._56);
       }
     }
   }

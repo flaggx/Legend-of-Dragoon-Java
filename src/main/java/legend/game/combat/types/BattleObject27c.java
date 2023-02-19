@@ -132,7 +132,7 @@ public class BattleObject27c extends BattleScriptDataBase {
   public int turnValue_4c;
   public int spellId_4e;
 
-  public int weaponId_52;
+  public int itemOrSpellId_52;
   public int guard_54;
   public int additionHits_56;
   public int selectedAddition_58;
@@ -168,7 +168,7 @@ public class BattleObject27c extends BattleScriptDataBase {
   public int monsterElementFlag_72;
   public int monsterElementalImmunityFlag_74;
   public int monsterStatusResistFlag_76;
-  public final SVECTOR _78 = new SVECTOR();
+  public final SVECTOR targetArrowPos_78 = new SVECTOR();
   public int _7e;
   public int _80;
   public int _82;
@@ -267,7 +267,7 @@ public class BattleObject27c extends BattleScriptDataBase {
 
   public int _142;
   public CombatantStruct1a8 combatant_144;
-  public final Model124 model_148 = new Model124();
+  public final Model124 model_148;
   public int combatantIndex_26c;
   public int animIndex_26e;
   public int animIndex_270;
@@ -276,6 +276,10 @@ public class BattleObject27c extends BattleScriptDataBase {
   public int _274;
   public int charSlot_276;
   public int _278;
+
+  public BattleObject27c(final String name) {
+    this.model_148 = new Model124(name);
+  }
 
   public int getStat(final int statIndex) {
     return switch(statIndex) {
@@ -318,7 +322,7 @@ public class BattleObject27c extends BattleScriptDataBase {
       case 36 -> this.turnValue_4c;
       case 37 -> this.spellId_4e;
 
-      case 39 -> this.weaponId_52;
+      case 39 -> this.itemOrSpellId_52;
       case 40 -> this.guard_54;
       case 41 -> this.additionHits_56;
       case 42 -> this.selectedAddition_58;
@@ -337,9 +341,9 @@ public class BattleObject27c extends BattleScriptDataBase {
       case 55 -> this.monsterElementFlag_72;
       case 56 -> this.monsterElementalImmunityFlag_74;
       case 57 -> this.monsterStatusResistFlag_76;
-      case 58 -> this._78.getX();
-      case 59 -> this._78.getY();
-      case 60 -> this._78.getZ();
+      case 58 -> this.targetArrowPos_78.getX();
+      case 59 -> this.targetArrowPos_78.getY();
+      case 60 -> this.targetArrowPos_78.getZ();
       case 61 -> this._7e;
       case 62 -> this._80;
       case 63 -> this._82;
@@ -469,7 +473,7 @@ public class BattleObject27c extends BattleScriptDataBase {
       case 36 -> this.turnValue_4c = value;
       case 37 -> this.spellId_4e = value;
 
-      case 39 -> this.weaponId_52 = value;
+      case 39 -> this.itemOrSpellId_52 = value;
       case 40 -> this.guard_54 = value;
       case 41 -> this.additionHits_56 = value;
       case 42 -> this.selectedAddition_58 = value;
@@ -488,9 +492,9 @@ public class BattleObject27c extends BattleScriptDataBase {
       case 55 -> this.monsterElementFlag_72 = value;
       case 56 -> this.monsterElementalImmunityFlag_74 = value;
       case 57 -> this.monsterStatusResistFlag_76 = value;
-      case 58 -> this._78.setX((short)value);
-      case 59 -> this._78.setY((short)value);
-      case 60 -> this._78.setZ((short)value);
+      case 58 -> this.targetArrowPos_78.setX((short)value);
+      case 59 -> this.targetArrowPos_78.setY((short)value);
+      case 60 -> this.targetArrowPos_78.setZ((short)value);
       case 61 -> this._7e = value;
       case 62 -> this._80 = value;
       case 63 -> this._82 = value;
